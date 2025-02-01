@@ -61,18 +61,10 @@ void MultiMeshInstance3D::_bind_methods() {
 }
 
 
-void MultiMeshInstance3D::populate_surface(Ref<Mesh> target_surface, Ref<Mesh> source_mesh, 
-                                                       UP_AXIS mesh_up_axis, float random_rotation, 
+void MultiMeshInstance3D::populate_surface(MeshInstance3D *target_surface, Ref<Mesh> source_mesh, 
+                                                       int mesh_up_axis, float random_rotation, 
                                                        float random_tilt, float random_scale, 
                                                        float scale, int amount) {
-
-	surface_source->set_text("..");
-	populate_axis->select(1);
-	populate_rotate_random->set_value(0);
-	populate_tilt_random->set_value(0);
-	populate_scale_random->set_value(0);
-	populate_scale->set_value(1);
-	populate_amount->set_value(128);
 
 	// Check if the source_mesh exists, otherwise use multimesh's mesh
 	if (source_mesh.is_null()) {
@@ -88,28 +80,15 @@ void MultiMeshInstance3D::populate_surface(Ref<Mesh> target_surface, Ref<Mesh> s
 		source_mesh = multimesh->get_mesh();
 	}
 
-	if (surface_source->get_text().is_empty()) {
-		ERR_FAIL_MSG("No surface source specified.");
+	// Check if the target surface meshinstance exists
+	if (!target_surface || target_surface->get_mesh().is_null()) {
+		ERR_FAIL_MSG("Target surface is invalid (no geometry).");
 		return;
 	}
 
-	Node *ss_node = node->get_node(surface_source->get_text());
+	Transform3D geom_xform = node->get_global_transform().affine_inverse() * target_surface->get_global_transform();
 
-	if (!ss_node) {
-		ERR_FAIL_MSG("Surface source is invalid (invalid path).");
-		return;
-	}
-
-	MeshInstance3D *ss_instance = Object::cast_to<MeshInstance3D>(ss_node);
-
-	if (!ss_instance || ss_instance->get_mesh().is_null()) {
-		ERR_FAIL_MSG("Surface source is invalid (no geometry).");
-		return;
-	}
-
-	Transform3D geom_xform = node->get_global_transform().affine_inverse() * ss_instance->get_global_transform();
-
-	Vector<Face3> geometry = ss_instance->get_mesh()->get_faces();
+	Vector<Face3> geometry = target_surface->get_mesh()->get_faces();
 
 	if (geometry.size() == 0) {
 		ERR_FAIL_MSG("Surface source is invalid (no faces).");
@@ -148,25 +127,24 @@ void MultiMeshInstance3D::populate_surface(Ref<Mesh> target_surface, Ref<Mesh> s
 	ERR_FAIL_COND_MSG(area_accum == 0, "Couldn't map area.");
 
 	Ref<MultiMesh> multimesh = memnew(MultiMesh);
-	multimesh->set_mesh(mesh);
+	multimesh->set_mesh(source_mesh);
 
-	int instance_count = populate_amount->get_value();
+	int instance_count = amount;
 
 	multimesh->set_transform_format(MultiMesh::TRANSFORM_3D);
 	multimesh->set_use_colors(false);
 	multimesh->set_instance_count(instance_count);
 
-	float _tilt_random = populate_tilt_random->get_value();
-	float _rotate_random = populate_rotate_random->get_value();
-	float _scale_random = populate_scale_random->get_value();
-	float _scale = populate_scale->get_value();
-	int axis = populate_axis->get_selected();
+	float _tilt_random = random_tilt;
+	float _rotate_random = random_rotation;
+	float _scale_random = random_scale;
+	float _scale = scale;
 
 	Transform3D axis_xform;
-	if (axis == Vector3::AXIS_Z) {
+	if (mesh_up_axis == Vector3::AXIS_Z) {
 		axis_xform.rotate(Vector3(1, 0, 0), -Math_PI * 0.5);
 	}
-	if (axis == Vector3::AXIS_X) {
+	if (mesh_up_axis == Vector3::AXIS_X) {
 		axis_xform.rotate(Vector3(0, 0, 1), -Math_PI * 0.5);
 	}
 
