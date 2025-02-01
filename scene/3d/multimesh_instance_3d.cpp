@@ -65,10 +65,8 @@ void MultiMeshInstance3D::populate_surface(Ref<Mesh> target_surface, Ref<Mesh> s
                                                        UP_AXIS mesh_up_axis, float random_rotation, 
                                                        float random_tilt, float random_scale, 
                                                        float scale, int amount) {
-	Ref<Mesh> mesh;
 
 	surface_source->set_text("..");
-	mesh_source->set_text("..");
 	populate_axis->select(1);
 	populate_rotate_random->set_value(0);
 	populate_tilt_random->set_value(0);
@@ -76,7 +74,9 @@ void MultiMeshInstance3D::populate_surface(Ref<Mesh> target_surface, Ref<Mesh> s
 	populate_scale->set_value(1);
 	populate_amount->set_value(128);
 
-	if (mesh_source->get_text().is_empty()) {
+	// Check if the source_mesh exists, otherwise use multimesh's mesh
+	if (source_mesh.is_null()) {
+		// Try to get the mesh from multimesh
 		if (multimesh.is_null()) {
 			ERR_FAIL_MSG("No mesh source specified (and no MultiMesh set in node).");
 			return;
@@ -85,29 +85,7 @@ void MultiMeshInstance3D::populate_surface(Ref<Mesh> target_surface, Ref<Mesh> s
 			ERR_FAIL_MSG("No mesh source specified (and MultiMesh contains no Mesh).");
 			return;
 		}
-
-		mesh = multimesh->get_mesh();
-	} else {
-		Node *ms_node = get_node(mesh_source->get_text());
-
-		if (!ms_node) {
-			ERR_FAIL_MSG("Mesh source is invalid (invalid path).");
-			return;
-		}
-
-		MeshInstance3D *ms_instance = Object::cast_to<MeshInstance3D>(ms_node);
-
-		if (!ms_instance) {
-			ERR_FAIL_MSG("Mesh source is invalid (not a MeshInstance3D).");
-			return;
-		}
-
-		mesh = ms_instance->get_mesh();
-
-		if (mesh.is_null()) {
-			ERR_FAIL_MSG("Mesh source is invalid (contains no Mesh resource).");
-			return;
-		}
+		source_mesh = multimesh->get_mesh();
 	}
 
 	if (surface_source->get_text().is_empty()) {
